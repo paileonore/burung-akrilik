@@ -7,7 +7,7 @@ import {
   Star
 } from 'lucide-react';
 
-const apiKey = ""; // Masukkan API Key Gemini lo di sini
+const apiKey = "AIzaSyBAAiSmwgsSfjb79uy5-wIEM3TxfNbDwtU"; // Masukkan API Key Gemini lo di sini
 
 const App = () => {
   const [news, setNews] = useState([]);
