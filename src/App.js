@@ -4,39 +4,29 @@ import {
   ShieldCheck, 
   Database, 
   RefreshCw,
-  Star
+  Star,
+  AlertCircle
 } from 'lucide-react';
 
-// Ganti baris apiKey yang lama dengan ini:
-const apiKey = process.env.REACT_APP_GEMINI_KEY || "AIzaSyBAAiSmwgsSfjb79uy5-wIEM3TxfNbDwtU"; 
- // Masukkan API Key Gemini lo di sini
+// Baris ini akan otomatis ambil API Key dari Vercel Environment Variables
+const apiKey = process.env.REACT_APP_GEMINI_KEY || ""; 
 
 const App = () => {
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [lastUpdate, setLastUpdate] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
 
   const generateDailyNews = async () => {
+    if (!apiKey) {
+      setErrorMsg("API Key tidak ditemukan. Pastikan sudah setting di Vercel.");
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
-    const systemPrompt = `
-      Anda adalah jurnalis masa depan untuk media "Burung Akrilik". 
-      Tugas Anda: Memberikan 3 berita masa depan yang BERBASIS FAKTA.
-      Format respons harus JSON: 
-      {
-        "news": [
-          {
-            "id": 1,
-            "category": "TEKNOLOGI",
-            "title": "Judul Singkat",
-            "summary": "Penjelasan fakta.",
-            "confidence": 95,
-            "source": "Institusi",
-            "tag": "Confirmed"
-          }
-        ]
-      }
-      Pai Leonore Branding. Gunakan Bahasa Indonesia.
-    `;
+    setErrorMsg("");
+
+    const systemPrompt = "Anda adalah jurnalis masa depan untuk media 'Burung Akrilik'. Berikan 3 berita masa depan berbasis fakta dalam format JSON: {\"news\": [{\"id\": 1, \"category\": \"TEKNOLOGI\", \"title\": \"...\", \"summary\": \"...\", \"confidence\": 95, \"source\": \"...\"}]}. Gunakan Bahasa Indonesia.";
 
     try {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
@@ -48,14 +38,18 @@ const App = () => {
           generationConfig: { responseMimeType: "application/json" }
         })
       });
+
       const result = await response.json();
-      if (result.candidates) {
+      
+      if (result.candidates && result.candidates[0].content.parts[0].text) {
         const content = JSON.parse(result.candidates[0].content.parts[0].text);
         setNews(content.news);
-        setLastUpdate(new Date().toLocaleTimeString('id-ID'));
+      } else {
+        throw new Error("Format respons Gemini tidak sesuai.");
       }
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Detail Error:", error);
+      setErrorMsg("Gagal memuat berita. Cek koneksi atau API Key.");
     } finally {
       setLoading(false);
     }
@@ -103,41 +97,52 @@ const App = () => {
           </p>
         </div>
 
+        {errorMsg && (
+          <div className="flex items-center gap-3 p-4 mb-10 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-sm italic">
+            <AlertCircle className="w-5 h-5" />
+            {errorMsg}
+          </div>
+        )}
+
         <div className="grid md:grid-cols-3 gap-8 mb-32">
           {loading ? (
             [1,2,3].map(i => (
               <div key={i} className="h-96 bg-white/[0.02] rounded-[3rem] border border-white/5 animate-pulse"></div>
             ))
           ) : (
-            news.map((item) => (
-              <div key={item.id} className="group relative bg-[#0a0f1e] border border-white/5 p-10 rounded-[3rem] hover:border-blue-600/50 transition-all duration-700 flex flex-col hover:bg-[#0c1429] hover:-translate-y-4">
-                <div className="flex justify-between items-start mb-12">
-                  <span className="text-[9px] font-black tracking-widest text-blue-500 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20 uppercase">
-                    {item.category}
-                  </span>
-                  <div className="text-right text-white">
-                    <p className="text-[8px] text-slate-500 font-bold uppercase mb-1">Akurasi</p>
-                    <p className="text-xl font-black leading-none">{item.confidence}%</p>
+            news.length > 0 ? (
+              news.map((item) => (
+                <div key={item.id} className="group relative bg-[#0a0f1e] border border-white/5 p-10 rounded-[3rem] hover:border-blue-600/50 transition-all duration-700 flex flex-col hover:bg-[#0c1429] hover:-translate-y-4">
+                  <div className="flex justify-between items-start mb-12">
+                    <span className="text-[9px] font-black tracking-widest text-blue-500 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20 uppercase">
+                      {item.category}
+                    </span>
+                    <div className="text-right text-white">
+                      <p className="text-[8px] text-slate-500 font-bold uppercase mb-1">Akurasi</p>
+                      <p className="text-xl font-black leading-none">{item.confidence}%</p>
+                    </div>
+                  </div>
+                  <h3 className="text-2xl font-bold mb-6 text-white group-hover:text-blue-400 transition-colors duration-500">
+                    {item.title}
+                  </h3>
+                  <p className="text-slate-400 leading-relaxed mb-12 flex-grow font-light italic">
+                    "{item.summary}"
+                  </p>
+                  <div className="pt-8 border-t border-white/5 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Database className="w-3.5 h-3.5 text-slate-600" />
+                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{item.source}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-emerald-500/80">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span className="text-[9px] font-black uppercase tracking-tighter">Verified</span>
+                    </div>
                   </div>
                 </div>
-                <h3 className="text-2xl font-bold mb-6 text-white group-hover:text-blue-400 transition-colors duration-500">
-                  {item.title}
-                </h3>
-                <p className="text-slate-400 leading-relaxed mb-12 flex-grow font-light italic">
-                  "{item.summary}"
-                </p>
-                <div className="pt-8 border-t border-white/5 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Database className="w-3.5 h-3.5 text-slate-600" />
-                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{item.source}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-emerald-500/80">
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    <span className="text-[9px] font-black uppercase tracking-tighter">Verified</span>
-                  </div>
-                </div>
-              </div>
-            ))
+              ))
+            ) : (
+              !errorMsg && <p className="text-slate-500 italic">Klik tombol Sinkronisasi untuk memuat data...</p>
+            )
           )}
         </div>
 
