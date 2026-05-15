@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Zap, ShieldCheck, Database, RefreshCw, Star, AlertCircle } from 'lucide-react';
 
 // API KEY GROQ LO LANGSUNG GUE PASANG DI SINI
-const response = await fetch('/api/news');
-const result = await response.json();"; 
 
 const App = () => {
   const [news, setNews] = useState([]);
@@ -15,30 +13,21 @@ const App = () => {
     setErrorMsg("");
 
     try {
-      const response = await fetch(`https://api.groq.com/openai/v1/chat/completions`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: "llama3-8b-8192",
-          messages: [
-            {
-              role: "system",
-              content: "Anda adalah jurnalis masa depan media 'Burung Akrilik'. Berikan 3 berita masa depan singkat berbasis fakta dalam format JSON: {\"news\": [{\"id\": 1, \"category\": \"TEKNOLOGI\", \"title\": \"...\", \"summary\": \"...\", \"confidence\": 95, \"source\": \"...\"}]}. Gunakan Bahasa Indonesia."
-            },
-            {
-              role: "user",
-              content: "Berikan laporan hari ini."
-            }
-          ],
-          response_format: { type: "json_object" }
-        })
-      });
+      try {
+  const response = await fetch('/api/news');
+  const result = await response.json();
 
-      const result = await response.json();
-      
+  if (result.choices && result.choices[0].message.content) {
+    const content = JSON.parse(result.choices[0].message.content);
+    setNews(content.news || []);
+  } else {
+    throw new Error("Gagal mengambil data.");
+  }
+
+} catch (error) {
+  console.error("Error:", error);
+  setErrorMsg("Koneksi bermasalah.");
+}
       if (result.choices && result.choices[0].message.content) {
         const content = JSON.parse(result.choices[0].message.content);
         setNews(content.news || []);
