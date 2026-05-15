@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Zap, ShieldCheck, Database, RefreshCw, Star, AlertCircle } from 'lucide-react';
 
 // API KEY GROQ LO LANGSUNG GUE PASANG DI SINI
-const apiKey = "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"; 
+const response = await fetch('/api/news');
+const result = await response.json();"; 
 
 const App = () => {
   const [news, setNews] = useState([]);
